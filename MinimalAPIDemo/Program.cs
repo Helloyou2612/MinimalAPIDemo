@@ -1,4 +1,6 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using System.Text;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Register services
 builder.Services.AddEndpointsApiExplorer();
@@ -79,6 +81,16 @@ app.MapDelete("/api/students/{id}", async (AppDbContext db, int id)
 
 #endregion Students
 
+#region Webhook recevice
+
+app.MapPost("/api/WebhookRecivice", async (HttpRequest request) =>
+    {
+        return await new Enpoints().WebhookData(request);
+    })    
+    .WithName("WebhookRecivice");
+
+#endregion 
+
 // Start the Server
 app.Run();
 
@@ -111,5 +123,21 @@ public class Enpoints
         db.Students.Remove(emp);
         await db.SaveChangesAsync();
         return Results.NoContent();
+    }
+
+    public async Task<IResult> WebhookData(HttpRequest request, Encoding? encoding = null, Stream? inputStream = null)
+    {
+        try
+        {
+            encoding ??= Encoding.UTF8;
+            inputStream ??= request.Body;
+
+            using (var reader = new StreamReader(inputStream, encoding))
+                return Results.Ok(await reader.ReadToEndAsync());
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
+        }
     }
 }
